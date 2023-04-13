@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
-contract GrowSwap is SpecialTransferHelper, Ownable, ReentrancyGuard {
+contract GrowAggregator is SpecialTransferHelper, Ownable, ReentrancyGuard {
     event MultiSwap(address from,bool isMulti);
     struct OpenseaTrades {
         uint256 value;
@@ -42,7 +42,6 @@ contract GrowSwap is SpecialTransferHelper, Ownable, ReentrancyGuard {
         bool isActive;
     }
 
-    address public constant GOV = 0xcD0313FD7CCa5648d2948c42C320Ba50CD0E6cB6;
     address public guardian;
     address public converter;
     address public punkProxy;
@@ -151,7 +150,7 @@ contract GrowSwap is SpecialTransferHelper, Ownable, ReentrancyGuard {
             AffiliateDetails memory affiliateDetails = affiliates[feeDetails[0]];
             affiliateDetails.isActive
                 ? _transferEth(affiliateDetails.affiliate, feeDetails[1])
-                : _transferEth(GOV, feeDetails[1]);
+                : _transferEth(owner(), feeDetails[1]);
         }
     }
 
