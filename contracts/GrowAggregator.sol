@@ -361,7 +361,8 @@ contract GrowAggregator is SpecialTransferHelper, Ownable, ReentrancyGuard {
         // execute trades
         for (uint256 i = 0; i < openseaTrades.length; i++) {
             // execute trade
-            address(0x7Be8076f4EA4A4AD08075C2508e481d6C946D12b).call{value:openseaTrades[i].value}(openseaTrades[i].tradeData);
+            (bool success,) = address(0x7Be8076f4EA4A4AD08075C2508e481d6C946D12b).call{value:openseaTrades[i].value}(openseaTrades[i].tradeData);
+            require(success, "call failed");
         }
 
         // return remaining ETH (if any)
