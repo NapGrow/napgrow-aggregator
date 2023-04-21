@@ -164,15 +164,20 @@ contract GrowAggregator is SpecialTransferHelper, Ownable, ReentrancyGuard {
         }
     }
 
+    function _transferERC20Batch(ERC20Details memory erc20Details) internal {
+        for (uint256 i = 0; i < erc20Details.tokenAddrs.length; i++) {
+            (bool success,) = erc20Details.tokenAddrs[i].call(abi.encodeWithSelector(0x23b872dd, msg.sender, address(this), erc20Details.amounts[i]));
+            require(success,"call failed 20");
+        }
+    }
+
     function _transferFromHelper(
         ERC20Details memory erc20Details,
         SpecialTransferHelper.ERC721Details[] memory erc721Details,
         ERC1155Details[] memory erc1155Details
     ) internal {
         // transfer ERC20 tokens from the sender to this contract
-        for (uint256 i = 0; i < erc20Details.tokenAddrs.length; i++) {
-            erc20Details.tokenAddrs[i].call(abi.encodeWithSelector(0x23b872dd, msg.sender, address(this), erc20Details.amounts[i]));
-        }
+        _transferERC20Batch(erc20Details);
 
         // transfer ERC721 tokens from the sender to this contract
         for (uint256 i = 0; i < erc721Details.length; i++) {
@@ -241,11 +246,11 @@ contract GrowAggregator is SpecialTransferHelper, Ownable, ReentrancyGuard {
         }
     }
 
-    function _returnDust(address[] memory _tokens) internal {
-        // return remaining ETH (if any)
+    function _returnETH() internal {
+        bool callStatus;
         assembly {
             if gt(selfbalance(), 0) {
-                let callStatus := call(
+                callStatus := call(
                     gas(),
                     caller(),
                     selfbalance(),
@@ -256,10 +261,16 @@ contract GrowAggregator is SpecialTransferHelper, Ownable, ReentrancyGuard {
                 )
             }
         }
+        require(callStatus,"return eth failed");
+    }
+    function _returnDust(address[] memory _tokens) internal {
+        // return remaining ETH (if any)
+        _returnETH();
         // return remaining tokens (if any)
         for (uint256 i = 0; i < _tokens.length; i++) {
             if (IERC20(_tokens[i]).balanceOf(address(this)) > 0) {
-                _tokens[i].call(abi.encodeWithSelector(0xa9059cbb, msg.sender, IERC20(_tokens[i]).balanceOf(address(this))));
+                (bool success,) = _tokens[i].call(abi.encodeWithSelector(0xa9059cbb, msg.sender, IERC20(_tokens[i]).balanceOf(address(this))));
+                require(success,"call failed");
             }
         }
     }
@@ -277,19 +288,7 @@ contract GrowAggregator is SpecialTransferHelper, Ownable, ReentrancyGuard {
         tradeLoop(market,nextMarketOrderIndex,trades);
 
         // return remaining ETH (if any)
-        assembly {
-            if gt(selfbalance(), 0) {
-                let callStatus := call(
-                    gas(),
-                    caller(),
-                    selfbalance(),
-                    0,
-                    0,
-                    0,
-                    0
-                )
-            }
-        }
+        _returnETH();
         emit MultiSwap(msg.sender, true);
     }
     
@@ -300,19 +299,7 @@ contract GrowAggregator is SpecialTransferHelper, Ownable, ReentrancyGuard {
         _trade(tradeDetails);
 
         // return remaining ETH (if any)
-        assembly {
-            if gt(selfbalance(), 0) {
-                let callStatus := call(
-                    gas(),
-                    caller(),
-                    selfbalance(),
-                    0,
-                    0,
-                    0,
-                    0
-                )
-            }
-        }
+        _returnETH();
         emit MultiSwap(msg.sender, true);
     }
 
@@ -325,10 +312,7 @@ contract GrowAggregator is SpecialTransferHelper, Ownable, ReentrancyGuard {
         address[] memory dustTokens
     ) payable external nonReentrant {
         // transfer ERC20 tokens from the sender to this contract
-        for (uint256 i = 0; i < erc20Details.tokenAddrs.length; i++) {
-            erc20Details.tokenAddrs[i].call(abi.encodeWithSelector(0x23b872dd, msg.sender, address(this), erc20Details.amounts[i]));
-        }
-
+        _transferERC20Batch(erc20Details);
         // Convert any assets if needed
         _conversionHelper(converstionDetails);
 
@@ -356,9 +340,7 @@ contract GrowAggregator is SpecialTransferHelper, Ownable, ReentrancyGuard {
         address[] memory dustTokens
     ) payable external nonReentrant {
         // transfer ERC20 tokens from the sender to this contract
-        for (uint256 i = 0; i < erc20Details.tokenAddrs.length; i++) {
-            erc20Details.tokenAddrs[i].call(abi.encodeWithSelector(0x23b872dd, msg.sender, address(this), erc20Details.amounts[i]));
-        }
+        _transferERC20Batch(erc20Details);
 
         // Convert any assets if needed
         _conversionHelper(converstionDetails);
@@ -383,19 +365,7 @@ contract GrowAggregator is SpecialTransferHelper, Ownable, ReentrancyGuard {
         }
 
         // return remaining ETH (if any)
-        assembly {
-            if gt(selfbalance(), 0) {
-                let callStatus := call(
-                    gas(),
-                    caller(),
-                    selfbalance(),
-                    0,
-                    0,
-                    0,
-                    0
-                )
-            }
-        }
+        _returnETH();
         emit MultiSwap(msg.sender, true);
     }
     // swaps any combination of ERC-20/721/1155
@@ -489,7 +459,8 @@ contract GrowAggregator is SpecialTransferHelper, Ownable, ReentrancyGuard {
     // Emergency function: In case any ERC20 tokens get stuck in the contract unintentionally
     // Only owner can retrieve the asset balance to a recipient address
     function rescueERC20(address asset, address recipient) onlyOwner external { 
-        asset.call(abi.encodeWithSelector(0xa9059cbb, recipient, IERC20(asset).balanceOf(address(this))));
+        (bool success,) = asset.call(abi.encodeWithSelector(0xa9059cbb, recipient, IERC20(asset).balanceOf(address(this))));
+        require(success, "rescueERC20 failed");
     }
 
     // Emergency function: In case any ERC721 tokens get stuck in the contract unintentionally

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity 0.8.4;
-
 interface ICryptoPunks {
 
     struct Offer {
@@ -20,20 +19,22 @@ interface ICryptoPunks {
     function transferPunk(address to, uint punkIndex) external;
 }
 
-library GrowCryptoPunksMarket {
-    address public constant CRYPTOPUNKS = 0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB;
+library GenieCryptoPunksMarket {
 
-    function buyAssetsForEth(uint256[] memory punkIndexes, uint256[] memory prices, address recipient) public {
+
+    // address public constant CRYPTOPUNKS = 0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB;
+
+    function buyAssetsForEth(address CRYPTOPUNKS, uint256[] memory punkIndexes, uint256[] memory prices, address recipient) public {
         for (uint256 i = 0; i < punkIndexes.length; i++) {
-            _buyAssetForEth(punkIndexes[i], prices[i], recipient);
+            _buyAssetForEth(CRYPTOPUNKS,punkIndexes[i], prices[i], recipient);
         }
     }
 
-    function _buyAssetForEth(uint256 _index, uint256 _price, address _recipient) internal {
+    function _buyAssetForEth(address CRYPTOPUNKS, uint256 _index, uint256 _price, address _recipient) internal {
         bytes memory _data = abi.encodeWithSelector(ICryptoPunks.buyPunk.selector, _index);
         (bool success, ) = CRYPTOPUNKS.call{value:_price}(_data);
-        if (success) {
-            ICryptoPunks(CRYPTOPUNKS).transferPunk(_recipient, _index);
-        }
+        require(success,"buy asset failed");
+        ICryptoPunks(CRYPTOPUNKS).transferPunk(_recipient, _index);
+        
     }
 }

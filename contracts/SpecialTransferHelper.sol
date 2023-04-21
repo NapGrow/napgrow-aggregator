@@ -82,12 +82,6 @@ contract SpecialTransferHelper is Context {
         }
     }
 
-    function _transferMoonCat(ERC721Details memory erc721Details) internal {
-        for (uint256 i = 0; i < erc721Details.ids.length; i++) {
-            IMoonCatsRescue(erc721Details.tokenAddr).giveCat(_uintToBytes5(erc721Details.ids[i]), erc721Details.to[i]);
-        }
-    }
-
     function _acceptCryptoPunk(ERC721Details memory erc721Details) internal {
         for (uint256 i = 0; i < erc721Details.ids.length; i++) {    
             address owner = ICryptoPunks(erc721Details.tokenAddr).punkIndexToAddress(erc721Details.ids[i]);
@@ -96,9 +90,4 @@ contract SpecialTransferHelper is Context {
         }
     }
 
-    function _transferCryptoPunk(ERC721Details memory erc721Details) internal {
-        for (uint256 i = 0; i < erc721Details.ids.length; i++) {
-            ICryptoPunks(erc721Details.tokenAddr).transferPunk(erc721Details.to[i], erc721Details.ids[i]);
-        }
-    }
 }
