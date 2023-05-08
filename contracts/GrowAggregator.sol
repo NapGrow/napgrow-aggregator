@@ -136,12 +136,13 @@ contract GrowAggregator is SpecialTransferHelper, Ownable, ReentrancyGuard {
     }
 
     function _transferEth(address _to, uint256 _amount) internal {
-        bool callStatus;
         assembly {
             // Transfer the ETH and store if it succeeded or not.
-            callStatus := call(gas(), _to, _amount, 0, 0, 0, 0)
+            if eq(0, call(gas(), _to, _amount, 0, 0, 0, 0)) { 
+                    mstore(0, 0x2c1ac1a600000000000000000000000000000000000000000000000000000000)
+                    revert(0, 0x04)
+                }
         }
-        require(callStatus, "_transferEth: Eth transfer failed");
     }
 
     function _collectFee(uint256[2] memory feeDetails) internal {
@@ -247,10 +248,9 @@ contract GrowAggregator is SpecialTransferHelper, Ownable, ReentrancyGuard {
     }
 
     function _returnETH() internal {
-        bool callStatus;
         assembly {
             if gt(selfbalance(), 0) {
-                callStatus := call(
+                if eq(0, call(
                     gas(),
                     caller(),
                     selfbalance(),
@@ -258,10 +258,12 @@ contract GrowAggregator is SpecialTransferHelper, Ownable, ReentrancyGuard {
                     0,
                     0,
                     0
-                )
+                )) { 
+                    mstore(0, 0x97df7d4c00000000000000000000000000000000000000000000000000000000)
+                    revert(0, 0x04)
+                }
             }
         }
-        require(callStatus,"return eth failed");
     }
     function _returnDust(address[] memory _tokens) internal {
         // return remaining ETH (if any)
@@ -327,10 +329,10 @@ contract GrowAggregator is SpecialTransferHelper, Ownable, ReentrancyGuard {
         for (uint256 i; i < trades.length; i++) {
             // execute trade
             (bool success, ) = address(market[mi]).call{value:trades[i].value}(trades[i].tradeData);
+            _checkCallResult(success);
             if(nextMarketOrderIndex[mi]==i) {
                 mi++;
             }
-            _checkCallResult(success);
         }
     }
     function batchBuyWithERC20s(
